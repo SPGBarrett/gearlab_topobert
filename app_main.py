@@ -20,9 +20,13 @@ Todo:
 '''
 
 # import lib
-from bzrs_main.modules.ml_models.topo_bert.dataset_process import *
-from bzrs_main.modules.ml_models.topo_bert.backbone_models import *
-from bzrs_main.modules.ml_models.topo_bert.model_trainer import *
+#from bzrs_main.modules.ml_models.topo_bert.dataset_process import *
+#from bzrs_main.modules.ml_models.topo_bert.backbone_models import *
+#from bzrs_main.modules.ml_models.topo_bert.model_trainer import *
+
+from .dataset_process import *
+from .backbone_models import *
+from .model_trainer import *
 
 # Switches:
 

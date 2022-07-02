@@ -252,7 +252,7 @@ class BertCNN1DNer(BertModel):
             for param in self.bert.parameters():
                 param.requires_grad = False
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None,valid_ids=None,attention_mask_label=None):
+    def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None, valid_ids=None, attention_mask_label=None):
         # Process the output of bert output state
         sequence_output = self.bert(input_ids, token_type_ids, attention_mask, head_mask=None, output_hidden_states=True)[0]
         batch_size, max_seq_len, hidden_layer_size = sequence_output.shape

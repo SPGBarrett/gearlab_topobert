@@ -40,8 +40,7 @@ class TopoBERT:
             model_dir (): Locate the dir that stores all the model files, or simply use the default path.
         '''
         self.model , self.tokenizer, self.model_config, self.training_config = self.load_model(model_dir)
-        tmp_processor = Processor_Harvey()
-        self.label_map = tmp_processor.get_labels()
+        self.label_map = {"1": "O", "2": "B-LOC", "3": "I-LOC", "4": "[CLS]", "5": "[SEP]"}
         self.max_seq_length = self.training_config["--max_seq_length"]
         self.label_map = {int(k): v for k, v in self.label_map.items()}
         self.device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -20,13 +20,15 @@ Todo:
 '''
 
 # import lib
-from .backbone_models import *
-from .dataset_process import *
+import nltk
+from bzrs_main.modules.ml_models.topo_bert.backbone_models import *
+from bzrs_main.modules.ml_models.topo_bert.dataset_process import *
 import os
 import json
-import nltk
 import re
 from nltk import word_tokenize
+import queue
+
 
 DEFAULT_TOPOBERT_PATH = './pretrained_models/topobert_cnn1d/'
 nltk.download('punkt')
@@ -39,14 +41,17 @@ class TopoBERT:
         Args:
             model_dir (): Locate the dir that stores all the model files, or simply use the default path.
         '''
-        self.model , self.tokenizer, self.model_config, self.training_config = self.load_model(model_dir)
-        self.label_map = {"1": "O", "2": "B-LOC", "3": "I-LOC", "4": "[CLS]", "5": "[SEP]"}
-        self.max_seq_length = self.training_config["--max_seq_length"]
-        self.label_map = {int(k): v for k, v in self.label_map.items()}
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        # Add model to device and set eval mode:
-        self.model = self.model.to(self.device)
-        self.model.eval()
+        try:
+            self.model , self.tokenizer, self.model_config, self.training_config = self.load_model(model_dir)
+            self.label_map = {"1": "O", "2": "B-LOC", "3": "I-LOC", "4": "[CLS]", "5": "[SEP]"}
+            self.max_seq_length = self.training_config["--max_seq_length"]
+            self.label_map = {int(k): v for k, v in self.label_map.items()}
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            # Add model to device and set eval mode:
+            self.model = self.model.to(self.device)
+            self.model.eval()
+        except Exception as e:
+            print(e)
 
     def load_model(self, model_dir: str, model_config: str = "model_config.json"):
         # Load model config:
@@ -103,6 +108,71 @@ class TopoBERT:
         return input_ids,input_mask,segment_ids,valid_positions
 
 
+    def prettify_result(self, org_result):
+        '''
+        Input the original result list from the TopoBERT and formulate the
+        Args:
+            org_result (str): list of the predicted result for each token.
+
+        Returns:
+            Prettified result output with extra information
+        '''
+        combined_addresses = []  # A list of all address
+        address_results = []  # A list of all predicted LOC
+        full_address = ''  # Link all addresses in combined_addresses
+        tmp_queue = queue.Queue(maxsize=20)
+        tmp_address = ''
+        for index, content in enumerate(org_result):
+            if content['tag'] == 'B-LOC':  # If B-LOC, clear, save and enqueue
+                # If not empty, empty it and save data:
+                if not tmp_queue.empty():
+                    # Get all content out first:
+                    while not tmp_queue.empty():
+                        tmp_address += str(tmp_queue.get()) + ' '
+                    tmp_address = tmp_address.strip()
+                    combined_addresses.append(tmp_address)
+                    tmp_address = ''
+                # Enqueue
+                tmp_queue.put(content['word'].strip())
+                # Save location entity:
+                address_results.append(content['word'].strip())
+            elif content['tag'] == 'I-LOC':  # If I-LOC, enqueue directly
+                # Enqueue
+                tmp_queue.put(content['word'].strip())
+                # Save location entity:
+                address_results.append(content['word'].strip())
+            else:  # Else, clear and save
+                if not tmp_queue.empty():
+                    # Get all content out first:
+                    while not tmp_queue.empty():
+                        tmp_address += str(tmp_queue.get()) + ' '
+                    tmp_address = tmp_address.strip()
+                    combined_addresses.append(tmp_address)
+                    tmp_address = ''
+        # Deal with remaining data:
+        if not tmp_queue.empty():
+            # Get all content out first:
+            while not tmp_queue.empty():
+                tmp_address += str(tmp_queue.get()) + ' '
+            tmp_address = tmp_address.strip()
+            combined_addresses.append(tmp_address)
+            tmp_address = ''
+
+        # Get Full address:
+        for add_content in combined_addresses:
+            full_address += ' ' + add_content
+        full_address = full_address.strip()
+
+        # Construct output result:
+        result_dict = {
+            'combined_addresses': combined_addresses,
+            'full_address': full_address,
+            'address_results': address_results
+        }
+
+        return result_dict
+
+
     def predict(self, text: str):
         input_ids, input_mask, segment_ids, valid_ids = self.preprocess(text)
         input_ids = torch.tensor([input_ids], dtype=torch.long, device=self.device)
@@ -133,7 +203,11 @@ class TopoBERT:
         words = word_tokenize(text)
         assert len(labels) == len(words)
         output = [{"word":word, "tag":label, "confidence":confidence} for word, (label, confidence) in zip(words, labels)]
-        return output
+        prettified_result = self.prettify_result(output)
+        result_dict = prettified_result
+        result_dict['org_result'] = output
+
+        return result_dict
 
     def extract_zip_from_text(self, text_data):
         us_zip_reg = r'(\d{5}\-?\d{0,4})'
@@ -169,7 +243,7 @@ def main():
     test_text = """HarveyStorm over Austin TX at 8: 00 AM CDT via Weather Underground"""
     # test_text = '''Houston HoustonFlood the intersection of I-45N. Main Street'''
     # model_dir = 'E:\\CodingProjects\\GRITFramework\\BZResearchStack\\src\\bzrs_main\\modules\\ml_models\\topo_bert\\outputs\\20220529205830\\'
-    model_dir = 'D:\\BarrettExclusiveSpace\\GeoparseEval\\20220526135822_in_use\\'
+    model_dir = 'D:\\BarrettExclusiveSpace\\GeoparseEval\\20220601200642_in_use_correct\\'
 
     current_geoparser = TopoBERT(model_dir)
     result = current_geoparser.predict(test_text)

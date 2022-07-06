@@ -39,7 +39,7 @@ transformers	4.11.2	<br>
 
 # How to deploy
 1. Clone the source codes and place in a path that your project can access.
-2. Download the [pretrained models](https://drive.google.com/file/d/1BJdh7dsMYGOdyX5tNkz2R2hbDtau7t3L/view?usp=sharing), unzip the file and place the folder with its original name in the pretrained_model folder.
+2. Download the [pretrained models](https://drive.google.com/file/d/1BJdh7dsMYGOdyX5tNkz2R2hbDtau7t3L/view?usp=sharing), unzip the file and place the folder with its original name in the pretrained_models folder.
 3. Download the required dependencies
 4. Ready to use.
 
@@ -58,10 +58,9 @@ print(result)
 The demo output results:
 ```json
 {
-	'ner_method': 'bert_ner_default',
-	'combined_address': 'Austin TX',
-	'ner_result': [('HarveyStorm', 'B-ORG'), ('over', 'O'), ('Austin', 'B-LOC'), ('TX', 'B-LOC'), ('at', 'O'), ('8', 'O'), (':', 'O'), ('00', 'O'), ('AM', 'O'), ('CDT', 'B-MISC'), ('via', 'O'), ('Weather', 'B-ORG'), ('Underground', 'I-ORG')],
+	'combined_addresses': ['Austin', 'TX'],
 	'address_result': ['Austin', 'TX'],
+    'full_address': 'Austin TX',
 	'org_result': [{
 		'word': 'HarveyStorm',
 		'tag': 'B-ORG',
